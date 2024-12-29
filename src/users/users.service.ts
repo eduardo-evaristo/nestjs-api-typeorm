@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { CreateUserParams } from './types/createUserParams';
+import { CreateUserParams } from './constants/createUserParams';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -74,6 +74,7 @@ export class UsersService {
       if (updateData.affected === 0)
         throw new HttpException('No changes were made', HttpStatus.BAD_REQUEST);
 
+      //Returning updated user
       return this.fetchOne(uuid);
       //catch does not account for length errors when inserting
     } catch (err) {

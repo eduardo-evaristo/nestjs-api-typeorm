@@ -1,7 +1,9 @@
+import { Chat } from 'src/chats/entities/chat.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -29,4 +31,7 @@ export class User {
 
   @Column({ nullable: true })
   authStrategy: string;
+
+  @OneToMany(() => Chat, (chat) => chat.user)
+  chats: Chat[];
 }

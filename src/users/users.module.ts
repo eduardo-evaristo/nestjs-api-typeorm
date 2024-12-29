@@ -8,5 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([User])],
   controllers: [UsersController],
   providers: [UsersService],
+  //Needs to be exported to be used inside ChatsModule (import there as well)
+  exports: [UsersService],
 })
 export class UsersModule {}

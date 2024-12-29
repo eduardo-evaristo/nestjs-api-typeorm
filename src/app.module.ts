@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
+import { ChatsModule } from './chats/chats.module';
+import { Chat } from './chats/entities/chat.entity';
 
 @Module({
   imports: [
@@ -14,11 +16,13 @@ import { User } from './users/entities/user.entity';
       database: process.env.DATABASE,
       username: process.env.USERNAME,
       password: process.env.PASSWORD,
-      entities: [User],
+      port: Number(process.env.DATABASE_PORT),
+      entities: [User, Chat],
       synchronize: true,
-      ssl: true,
+      ssl: false,
     }),
     UsersModule,
+    ChatsModule,
   ],
 })
 export class AppModule {}

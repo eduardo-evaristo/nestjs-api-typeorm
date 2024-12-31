@@ -13,6 +13,9 @@ export class Chat {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ length: 16, nullable: true })
+  name: string;
+
   @Column({ type: 'text', nullable: true })
   summary: string;
 

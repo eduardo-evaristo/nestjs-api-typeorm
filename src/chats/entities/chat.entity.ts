@@ -1,9 +1,11 @@
+import { Question } from 'src/questions/entities/question.entity';
 import { User } from 'src/users/entities/user.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -29,4 +31,6 @@ export class Chat {
   user: User;
 
   //TODO: Questions relationship
+  @OneToMany(() => Question, (question) => question.chat)
+  questions: Question[];
 }

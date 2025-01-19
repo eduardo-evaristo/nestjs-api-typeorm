@@ -1,15 +1,25 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { UsersService } from 'src/users/users.service';
 import { UpdateChatDto } from './dtos/update-chat.dto';
+import { QuestionsService } from 'src/questions/questions.service';
+import { QueryParam } from './constants/queryParam';
+import { QuestionDetails } from 'src/questions/constants/questionDetails';
 
 @Injectable()
 export class ChatsService {
   constructor(
     @InjectRepository(Chat) private readonly chatsRepository: Repository<Chat>,
     private readonly usersService: UsersService,
+    private readonly questionsService: QuestionsService,
   ) {}
 
   //For now I'll assume the id is predictable since it'll be in the JWT payload and likely visible in the request conetxt
@@ -43,9 +53,11 @@ export class ChatsService {
 
   async fetchOne(chatId: string) {
     // Retrieving chat from db
+    //Should I fetch only yhe chat per id and then use QuestionsService to find all questions per Chat to use skip/take?
     const chat = await this.chatsRepository.findOne({
       where: { id: chatId },
       select: ['id', 'name', 'summary'],
+      // relations: { questions: { alternatives: true } },
     });
 
     // If chat is not found
@@ -54,9 +66,20 @@ export class ChatsService {
     return chat;
   }
 
+  async fetchChatWithQuestions(chatId: string, query: QueryParam) {
+    // Retrieving chat from db
+    //Should I fetch only yhe chat per id and then use QuestionsService to find all questions per Chat to use skip/take? - solved
+    const chat = await this.fetchOne(chatId);
+
+    const questions = await this.questionsService.fetchByChat(chat, query);
+
+    return { chat, questions };
+  }
+
   async update(userId: string, chatId: string, updateDetails: UpdateChatDto) {
     // Checking user's esixtence
     const user = await this.usersService.fetchOne(userId);
+
     const updatedData = await this.chatsRepository.update(
       { id: chatId },
       updateDetails,
@@ -67,5 +90,9 @@ export class ChatsService {
       throw new HttpException('No changes were made', HttpStatus.BAD_REQUEST);
 
     return this.fetchOne(chatId);
+  }
+
+  createQuestion(chatId: string, questionDetails: QuestionDetails) {
+    return this.questionsService.createQuestion(chatId, questionDetails);
   }
 }

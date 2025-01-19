@@ -6,9 +6,13 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { UpdateChatDto } from './dtos/update-chat.dto';
+import { CreateQuestionDto } from 'src/questions/dtos/create-question.dto';
+import { ValidateQuery } from './pipes/validate-query.pipe';
+import { QueryParam } from './constants/queryParam';
 
 @Controller('chats')
 export class ChatsController {
@@ -37,5 +41,21 @@ export class ChatsController {
     @Param('uuid', ParseUUIDPipe) chatId: string,
   ) {
     return this.chatsService.update(this.userID, chatId, updateChatDto);
+  }
+
+  @Get(':uuid/questions')
+  fetchChatWithQuestions(
+    @Param('uuid', ParseUUIDPipe) chatId: string,
+    @Query(ValidateQuery) query: QueryParam,
+  ) {
+    return this.chatsService.fetchChatWithQuestions(chatId, query);
+  }
+
+  @Post(':uuid/questions')
+  createChat(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() createQuestionDto: CreateQuestionDto,
+  ) {
+    return this.chatsService.createQuestion(uuid, createQuestionDto);
   }
 }

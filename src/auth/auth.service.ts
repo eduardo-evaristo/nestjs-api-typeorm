@@ -35,4 +35,19 @@ export class AuthService {
     //Pass it down to createUser
     return this.usersService.createUser(toBeCreatedUser);
   }
+
+  //For use with passport strategy
+  async validateUser(email: string, pass: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    //If user is truthy and passwords match
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, chats, ...result } = user;
+      return result;
+    }
+
+    //Otherwise, return null
+    return null;
+  }
 }

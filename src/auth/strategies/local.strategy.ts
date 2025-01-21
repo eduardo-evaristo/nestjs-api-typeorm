@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import { AuthService } from '../auth.service';
 import { Request } from 'express';
+import { RequestUser } from '../constants/requestUser';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -11,7 +12,11 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     super({ usernameField: 'email', passReqToCallback: true });
   }
 
-  async validate(req: Request, email: string, password: string) {
+  async validate(
+    req: Request,
+    email: string,
+    password: string,
+  ): Promise<RequestUser> {
     //For debugging purposes
     console.log(email, password);
 
@@ -20,7 +25,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     console.log(user);
 
     //If user isnt found
-    if (!user) throw new UnauthorizedException('You do not have access');
+    if (!user) throw new UnauthorizedException('Incorrect credentials');
 
     //If all is ok, I guess this attaches it to the request obj (it does)
     return user;

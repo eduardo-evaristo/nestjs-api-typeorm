@@ -3,10 +3,17 @@ import * as bcrypt from 'bcrypt';
 import { CreateUserParams } from 'src/users/constants/createUserParams';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
+import { JWTPayload } from './constants/jwtPayload';
+import { User } from 'src/users/entities/user.entity';
+import { RequestUser } from './constants/requestUser';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async signUp(createUserDto: CreateUserDto) {
     //Check if email is already registered
@@ -36,9 +43,9 @@ export class AuthService {
     return this.usersService.createUser(toBeCreatedUser);
   }
 
-  //For use with passport strategy
+  //For use with passport strategy (validation inside verify)
   async validateUser(email: string, pass: string) {
-    const user = await this.usersService.findByEmail(email);
+    const user: User = await this.usersService.findByEmail(email);
 
     //If user is truthy and passwords match
     if (user && (await bcrypt.compare(pass, user.password))) {
@@ -49,5 +56,12 @@ export class AuthService {
 
     //Otherwise, return null
     return null;
+  }
+
+  async login(user: RequestUser) {
+    //This is what the jwt payload should include
+    const payload: JWTPayload = { sub: user.id, email: user.email };
+    //Generating JWT and returning it to the client (might as well save this as a cookie later on)
+    return { accessToken: await this.jwtService.signAsync(payload) };
   }
 }

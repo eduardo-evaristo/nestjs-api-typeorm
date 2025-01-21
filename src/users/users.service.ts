@@ -4,6 +4,8 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserParams } from './constants/createUserParams';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { OAuthCreateUserParams } from './constants/OAuthCreateUserParams';
+import { RequestUser } from 'src/auth/constants/requestUser';
 
 @Injectable()
 export class UsersService {
@@ -41,7 +43,7 @@ export class UsersService {
     }
   }
 
-  createUser(userData: CreateUserParams) {
+  createUser(userData: CreateUserParams | OAuthCreateUserParams) {
     try {
       //Creates an instance of user (based on the entity class)
       const newUser = this.userRepository.create(userData);
@@ -54,6 +56,21 @@ export class UsersService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async createGoogleUser(
+    userDetails: OAuthCreateUserParams,
+  ): Promise<RequestUser> {
+    //Create user from entity
+    const newUser = await this.userRepository.create(userDetails);
+
+    //Actually saving user into database
+    const savedUser = await this.userRepository.save(newUser);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, chats, ...result } = savedUser;
+    console.log(`resultado: ${result} \n new user: ${newUser}`);
+    return result;
   }
 
   async updateUser(uuid: string, userData: UpdateUserDto) {

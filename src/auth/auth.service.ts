@@ -44,11 +44,25 @@ export class AuthService {
   }
 
   //For use with passport strategy (validation inside verify)
-  async validateUser(email: string, pass: string) {
+  async validateUser(email: string, pass: string): Promise<RequestUser | null> {
     const user: User = await this.usersService.findByEmail(email);
 
     //If user is truthy and passwords match
     if (user && (await bcrypt.compare(pass, user.password))) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, chats, ...result } = user;
+      return result;
+    }
+
+    //Otherwise, return null
+    return null;
+  }
+
+  async validateGoogleUser(email: string): Promise<RequestUser | null> {
+    const user: User = await this.usersService.findByEmail(email);
+
+    //If user exists
+    if (user) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, chats, ...result } = user;
       return result;

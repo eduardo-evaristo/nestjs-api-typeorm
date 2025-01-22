@@ -7,43 +7,53 @@ import {
   Patch,
   Post,
   Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { UpdateChatDto } from './dtos/update-chat.dto';
 import { CreateQuestionDto } from 'src/questions/dtos/create-question.dto';
 import { ValidateQuery } from './pipes/validate-query.pipe';
 import { QueryParam } from './constants/queryParam';
+import { JwtGuard } from 'src/auth/guards/jwt.guard';
+import { AuthenticatedRequest } from 'src/auth/constants/authenticatedRequest';
 
 @Controller('chats')
 export class ChatsController {
-  userID = 'b49e0639-31a0-4a79-82a6-ba961ab90b57';
   constructor(private readonly chatsService: ChatsService) {}
 
-  //hard-coded user's id for the sake of testing stuff out
   @Get()
-  getAll() {
-    return this.chatsService.fetch(this.userID);
+  @UseGuards(JwtGuard)
+  getAll(@Request() req: AuthenticatedRequest) {
+    const { sub: uuid } = req.user;
+    return this.chatsService.fetch(uuid);
   }
 
   @Get(':uuid')
+  @UseGuards(JwtGuard)
   getOne(@Param('uuid', ParseUUIDPipe) chatId: string) {
     return this.chatsService.fetchOne(chatId);
   }
 
   @Post()
-  create() {
-    return this.chatsService.createChat(this.userID);
+  @UseGuards(JwtGuard)
+  create(@Request() req: AuthenticatedRequest) {
+    const { sub: uuid } = req.user;
+    return this.chatsService.createChat(uuid);
   }
 
   @Patch(':uuid')
   update(
     @Body() updateChatDto: UpdateChatDto,
     @Param('uuid', ParseUUIDPipe) chatId: string,
+    @Request() req: AuthenticatedRequest,
   ) {
-    return this.chatsService.update(this.userID, chatId, updateChatDto);
+    const { sub: userID } = req.user;
+    return this.chatsService.update(userID, chatId, updateChatDto);
   }
 
   @Get(':uuid/questions')
+  @UseGuards(JwtGuard)
   fetchChatWithQuestions(
     @Param('uuid', ParseUUIDPipe) chatId: string,
     @Query(ValidateQuery) query: QueryParam,
@@ -52,6 +62,7 @@ export class ChatsController {
   }
 
   @Post(':uuid/questions')
+  @UseGuards(JwtGuard)
   createChat(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() createQuestionDto: CreateQuestionDto,

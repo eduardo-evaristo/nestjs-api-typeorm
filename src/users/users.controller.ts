@@ -8,6 +8,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,6 +16,7 @@ import { ValidatePassword } from './pipes/validate-password.pipe';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ValidateLength } from './pipes/validate-length.pipe';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
+import { AuthenticatedRequest } from 'src/auth/constants/authenticatedRequest';
 
 @Controller('users')
 export class UsersController {
@@ -22,35 +24,49 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtGuard)
-  getAll() {
-    return this.usersService.fetch();
-  }
-
-  @Get(':uuid')
-  getOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  getOne(@Request() req: AuthenticatedRequest) {
+    const { sub: uuid } = req.user;
     return this.usersService.fetchOne(uuid);
   }
 
-  @Post()
-  create(@Body(ValidateLength, ValidatePassword) createUserDto: CreateUserDto) {
-    //Creating copy of body (post-validation)
-    const { confirmPassword, ...userData } = createUserDto;
-
-    //Calling our service layer and returning whatever it returns
-    return this.usersService.createUser(userData);
-  }
-
-  @Patch(':uuid')
+  @Patch()
+  @UseGuards(JwtGuard)
   edit(
-    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest,
     @Body(ValidateLength, ValidatePassword) updateUserDto: UpdateUserDto,
   ) {
+    //Stripping user uuid out of authenticated request
+    const { sub: uuid } = req.user;
+
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...userData } = updateUserDto;
+
     return this.usersService.updateUser(uuid, userData);
   }
 
-  @Delete(':uuid')
-  delete(@Param('uuid', ParseUUIDPipe) uuid: string) {
-    return this.usersService.deleteUser(uuid);
+  @Delete()
+  @UseGuards(JwtGuard)
+  deleteOwnAccount(@Request() req: AuthenticatedRequest) {
+    return this.usersService.deleteUser(req.user.sub);
   }
+
+  //TODO: Add roles for these to work properly
+
+  // @Get()
+  // @UseGuards(JwtGuard)
+  // //TODO: Only users with admin role should be able to fetch all users
+  // getAll() {
+  //   return this.usersService.fetch();
+  // }
+
+  // @Post()
+  // @UseGuards(JwtGuard)
+  // //TODO: Only users with admin role should be create users withou the auth phase
+  // create(@Body(ValidateLength, ValidatePassword) createUserDto: CreateUserDto) {
+  //   //Creating copy of body (post-validation)
+  //   const { confirmPassword, ...userData } = createUserDto;
+
+  //   //Calling our service layer and returning whatever it returns
+  //   return this.usersService.createUser(userData);
+  // }
 }

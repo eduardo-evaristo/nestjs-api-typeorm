@@ -17,13 +17,17 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ValidateLength } from './pipes/validate-length.pipe';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { AuthenticatedRequest } from 'src/auth/constants/authenticatedRequest';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from './enums/roles.enum';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Controller('users')
+@Roles(Role.USER, Role.ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
   getOne(@Request() req: AuthenticatedRequest) {
     const { sub: uuid } = req.user;
     return this.usersService.fetchOne(uuid);
@@ -50,23 +54,21 @@ export class UsersController {
     return this.usersService.deleteUser(req.user.sub);
   }
 
-  //TODO: Add roles for these to work properly
+  @Get('all')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  getAll() {
+    return this.usersService.fetch();
+  }
 
-  // @Get()
-  // @UseGuards(JwtGuard)
-  // //TODO: Only users with admin role should be able to fetch all users
-  // getAll() {
-  //   return this.usersService.fetch();
-  // }
+  @Post()
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  create(@Body(ValidateLength, ValidatePassword) createUserDto: CreateUserDto) {
+    //Creating copy of body (post-validation)
+    const { confirmPassword, ...userData } = createUserDto;
 
-  // @Post()
-  // @UseGuards(JwtGuard)
-  // //TODO: Only users with admin role should be create users withou the auth phase
-  // create(@Body(ValidateLength, ValidatePassword) createUserDto: CreateUserDto) {
-  //   //Creating copy of body (post-validation)
-  //   const { confirmPassword, ...userData } = createUserDto;
-
-  //   //Calling our service layer and returning whatever it returns
-  //   return this.usersService.createUser(userData);
-  // }
+    //Calling our service layer and returning whatever it returns
+    return this.usersService.createUser(userData);
+  }
 }

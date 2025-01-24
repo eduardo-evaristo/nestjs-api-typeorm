@@ -16,6 +16,7 @@ export class JWTStrategy extends PassportStrategy(Strategy) {
 
   //This validate receives only the decoded token, this fn is only triggered in case our code was successfully decoded, otherwise, it'll throw an 401 Unauthorized and not hit the handler being protected by this guard
   async validate(token) {
+    //TODO: Fetch user's most up-to-date role inside here and include it in the token
     console.log(token);
     return token;
   }

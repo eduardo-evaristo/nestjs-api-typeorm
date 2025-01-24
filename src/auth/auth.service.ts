@@ -74,7 +74,7 @@ export class AuthService {
 
   async login(user: RequestUser) {
     //This is what the jwt payload should include
-    const payload: JWTPayload = { sub: user.id, email: user.email };
+    const payload: JWTPayload = { sub: user.id, role: user.role };
     //Generating JWT and returning it to the client (might as well save this as a cookie later on)
     return { accessToken: await this.jwtService.signAsync(payload) };
   }

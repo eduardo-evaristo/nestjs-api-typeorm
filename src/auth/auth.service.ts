@@ -9,6 +9,8 @@ import { RequestUser } from './constants/requestUser';
 import { JwtService } from '@nestjs/jwt';
 import refreshJwtConfig from './config/refreshJwt.config';
 import { ConfigType } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +19,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @Inject(refreshJwtConfig.KEY)
     private configService: ConfigType<typeof refreshJwtConfig>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async signUp(createUserDto: CreateUserDto) {
@@ -82,13 +85,15 @@ export class AuthService {
     const accessTokenPayload: JWTPayload = { sub: user.id, role: user.role };
 
     //Generating JWT and returning it to the client (might as well save this as a cookie later on)
-    return {
-      accessToken: await this.jwtService.signAsync(accessTokenPayload),
-      refreshToken: await this.jwtService.signAsync(accessTokenPayload, {
-        secret: this.configService.secret,
-        expiresIn: this.configService.expiresIn,
-      }),
-    };
+    const accessToken = await this.jwtService.signAsync(accessTokenPayload);
+    const refreshToken = await this.jwtService.signAsync(accessTokenPayload, {
+      secret: this.configService.secret,
+      expiresIn: this.configService.expiresIn,
+    });
+
+    await this.cacheManager.set(refreshToken, user.id, 120000);
+
+    return { accessToken, refreshToken };
   }
 
   async refreshToken(payloadFromRefresh: JWTPayload) {

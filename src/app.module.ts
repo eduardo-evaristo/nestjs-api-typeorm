@@ -2,27 +2,20 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
-import { User } from './users/entities/user.entity';
 import { ChatsModule } from './chats/chats.module';
-import { Chat } from './chats/entities/chat.entity';
+import { QuestionsModule } from './questions/questions.module';
+import { AuthModule } from './auth/auth.module';
+import dbConfig from './config/db.config';
 
 @Module({
   imports: [
     //Loading the .env variables
-    ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.HOST,
-      database: process.env.DATABASE,
-      username: process.env.USERNAME,
-      password: process.env.PASSWORD,
-      port: Number(process.env.DATABASE_PORT),
-      entities: [User, Chat],
-      synchronize: true,
-      ssl: false,
-    }),
+    ConfigModule.forRoot({ load: [dbConfig], isGlobal: true }),
+    TypeOrmModule.forRootAsync(dbConfig.asProvider()),
     UsersModule,
     ChatsModule,
+    QuestionsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

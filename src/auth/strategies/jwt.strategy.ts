@@ -1,15 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import jwtModuleConfig from '../config/jwtModule.config';
 
 //Unlike local strat, used to initiate the login validation, which then influences the controller directly thru req.use to generate a token, this one is more of a normal guard, so it does not initiate the auth or anything, it simply acts as a guard in the sense of deciding whether the handler'll be hit or not
 
 @Injectable()
 export class JWTStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(
+    @Inject(jwtModuleConfig.KEY)
+    private readonly configService: ConfigType<typeof jwtModuleConfig>,
+  ) {
     super({
-      secretOrKey: process.env.JWT_SECRET,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.secret,
       ignoreExpiration: false,
     });
   }

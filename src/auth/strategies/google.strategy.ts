@@ -5,16 +5,19 @@ import { AuthService } from '../auth.service';
 import { RequestUser } from '../constants/requestUser';
 import { UsersService } from 'src/users/users.service';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables } from 'src/constants/env';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UsersService,
+    private readonly configService: ConfigService<EnvironmentVariables>,
   ) {
     super({
-      clientID: process.env.GOOGLE_OAUTH2_CLIENTID,
-      clientSecret: process.env.GOOGLE_OAUTH2_CLIENTSECRET,
+      clientID: configService.get('GOOGLE_OAUTH2_CLIENTID'),
+      clientSecret: configService.get('GOOGLE_OAUTH2_CLIENTSECRET'),
       callbackURL: 'http://localhost:3000/auth/google/post',
       scope: ['profile', 'email'],
     });

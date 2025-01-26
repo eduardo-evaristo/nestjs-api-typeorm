@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserParams } from 'src/users/constants/createUserParams';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -7,12 +7,16 @@ import { JWTPayload } from './constants/jwtPayload';
 import { User } from 'src/users/entities/user.entity';
 import { RequestUser } from './constants/requestUser';
 import { JwtService } from '@nestjs/jwt';
+import refreshJwtConfig from './config/refreshJwt.config';
+import { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    @Inject(refreshJwtConfig.KEY)
+    private configService: ConfigType<typeof refreshJwtConfig>,
   ) {}
 
   async signUp(createUserDto: CreateUserDto) {
@@ -74,9 +78,20 @@ export class AuthService {
 
   //TODO: sign payload with token only
   async login(user: RequestUser) {
-    //Payload to be signed into JWT
-    const payload: JWTPayload = { sub: user.id, role: user.role };
+    //Payload to be signed into JWT and Refresh JWT
+    const accessTokenPayload: JWTPayload = { sub: user.id, role: user.role };
+
     //Generating JWT and returning it to the client (might as well save this as a cookie later on)
-    return { accessToken: await this.jwtService.signAsync(payload) };
+    return {
+      accessToken: await this.jwtService.signAsync(accessTokenPayload),
+      refreshToken: await this.jwtService.signAsync(accessTokenPayload, {
+        secret: this.configService.secret,
+        expiresIn: this.configService.expiresIn,
+      }),
+    };
+  }
+
+  async refreshToken(payloadFromRefresh: JWTPayload) {
+    return { acessToken: await this.jwtService.signAsync(payloadFromRefresh) };
   }
 }

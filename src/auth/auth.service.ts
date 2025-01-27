@@ -11,6 +11,8 @@ import refreshJwtConfig from './config/refreshJwt.config';
 import { ConfigType } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { AuthenticatedRequest } from './constants/authenticatedRequest';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -98,5 +100,21 @@ export class AuthService {
 
   async refreshToken(payloadFromRefresh: JWTPayload) {
     return { acessToken: await this.jwtService.signAsync(payloadFromRefresh) };
+  }
+
+  logout(
+    accessToken: string,
+    refreshToken: string,
+    user,
+    res: Response,
+  ): Response {
+    //Blacklisting last used access token (inserting into cache for 1h)
+    this.cacheManager.set(accessToken, user.sub, 3600000);
+
+    //Removing refresh token out of cookie and removing it from the whitelist
+    res.clearCookie('refreshToken');
+    this.cacheManager.del(refreshToken);
+
+    return res;
   }
 }

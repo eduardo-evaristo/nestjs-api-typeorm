@@ -18,6 +18,7 @@ import { RequestUser } from './constants/requestUser';
 import { GoogleGuard } from './guards/google.guard';
 import { RefreshGuard } from './guards/refresh-jwt.guard';
 import { AuthenticatedRequest } from './constants/authenticatedRequest';
+import { JwtGuard } from './guards/jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -57,11 +58,30 @@ export class AuthController {
     return this.authService.login(req.user as RequestUser);
   }
 
-  //Whenever acesstoken is expired, the client must try and hit this route, if their refresh token is not expired and is valid, they will be issued a new access token with the payload contained in the refreshToken, which is the same as the one in acessToken
+  //Whenever acesstoken is expired, the client must try and hit this route, if their refresh token is not expired and is valid, they will be issued a n-ew access token with the payload contained in the refreshToken, which is the same as the one in acessToken
   @Post('refresh')
   @UseGuards(RefreshGuard)
   refreshToken(@Request() req: AuthenticatedRequest) {
     const payloadFromRefresh = { sub: req.user.sub, role: req.user.role };
     return this.authService.refreshToken(payloadFromRefresh);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtGuard)
+  //Fix typing later, sum is wrong with AuthenticatedRequest when using req.headers
+  logout(@Request() req: ExpressRequest, @Response() res: ExpressResponse) {
+    const accessToken = req.headers.authorization.split(' ')[1];
+    const refreshToken = req.cookies.refreshToken;
+    const user = req.user;
+
+    //For debbuging purposes
+    console.log('logout');
+    console.log(accessToken, refreshToken);
+
+    //Assigning response with cookie cleared to res (see method)
+    res = this.authService.logout(accessToken, refreshToken, user, res);
+
+    //Finishing the req-res cycle with the cookie-free response
+    res.sendStatus(200);
   }
 }

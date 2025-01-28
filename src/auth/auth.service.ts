@@ -8,11 +8,12 @@ import { User } from 'src/users/entities/user.entity';
 import { RequestUser } from './constants/requestUser';
 import { JwtService } from '@nestjs/jwt';
 import refreshJwtConfig from './config/refreshJwt.config';
-import { ConfigType } from '@nestjs/config';
+import { ConfigService, ConfigType } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { AuthenticatedRequest } from './constants/authenticatedRequest';
 import { Response } from 'express';
+import { EnvironmentVariables } from 'src/constants/env';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     @Inject(refreshJwtConfig.KEY)
-    private configService: ConfigType<typeof refreshJwtConfig>,
+    private refreshConfigService: ConfigType<typeof refreshJwtConfig>,
+    private configService: ConfigService<EnvironmentVariables>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -89,11 +91,15 @@ export class AuthService {
     //Generating JWT and returning it to the client (might as well save this as a cookie later on)
     const accessToken = await this.jwtService.signAsync(accessTokenPayload);
     const refreshToken = await this.jwtService.signAsync(accessTokenPayload, {
-      secret: this.configService.secret,
-      expiresIn: this.configService.expiresIn,
+      secret: this.refreshConfigService.secret,
+      expiresIn: this.refreshConfigService.expiresIn,
     });
 
-    await this.cacheManager.set(refreshToken, user.id, 120000);
+    await this.cacheManager.set(
+      refreshToken,
+      user.id,
+      this.configService.get('REFRESH_TOKEN_WHITELIST_TTL'),
+    );
 
     return { accessToken, refreshToken };
   }
@@ -109,7 +115,11 @@ export class AuthService {
     res: Response,
   ): Response {
     //Blacklisting last used access token (inserting into cache for 1h)
-    this.cacheManager.set(accessToken, user.sub, 3600000);
+    this.cacheManager.set(
+      accessToken,
+      1,
+      this.configService.get('ACCESS_TOKEN_BLACKLIST_TTL'),
+    );
 
     //Removing refresh token out of cookie and removing it from the whitelist
     res.clearCookie('refreshToken');

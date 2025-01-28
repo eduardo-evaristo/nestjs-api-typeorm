@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserParams } from 'src/users/constants/createUserParams';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -7,12 +7,23 @@ import { JWTPayload } from './constants/jwtPayload';
 import { User } from 'src/users/entities/user.entity';
 import { RequestUser } from './constants/requestUser';
 import { JwtService } from '@nestjs/jwt';
+import refreshJwtConfig from './config/refreshJwt.config';
+import { ConfigService, ConfigType } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { AuthenticatedRequest } from './constants/authenticatedRequest';
+import { Response } from 'express';
+import { EnvironmentVariables } from 'src/constants/env';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    @Inject(refreshJwtConfig.KEY)
+    private refreshConfigService: ConfigType<typeof refreshJwtConfig>,
+    private configService: ConfigService<EnvironmentVariables>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async signUp(createUserDto: CreateUserDto) {
@@ -74,9 +85,46 @@ export class AuthService {
 
   //TODO: sign payload with token only
   async login(user: RequestUser) {
-    //Payload to be signed into JWT
-    const payload: JWTPayload = { sub: user.id, role: user.role };
+    //Payload to be signed into JWT and Refresh JWT
+    const accessTokenPayload: JWTPayload = { sub: user.id, role: user.role };
+
     //Generating JWT and returning it to the client (might as well save this as a cookie later on)
-    return { accessToken: await this.jwtService.signAsync(payload) };
+    const accessToken = await this.jwtService.signAsync(accessTokenPayload);
+    const refreshToken = await this.jwtService.signAsync(accessTokenPayload, {
+      secret: this.refreshConfigService.secret,
+      expiresIn: this.refreshConfigService.expiresIn,
+    });
+
+    await this.cacheManager.set(
+      refreshToken,
+      user.id,
+      this.configService.get('REFRESH_TOKEN_WHITELIST_TTL'),
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  async refreshToken(payloadFromRefresh: JWTPayload) {
+    return { acessToken: await this.jwtService.signAsync(payloadFromRefresh) };
+  }
+
+  logout(
+    accessToken: string,
+    refreshToken: string,
+    user,
+    res: Response,
+  ): Response {
+    //Blacklisting last used access token (inserting into cache for 1h)
+    this.cacheManager.set(
+      accessToken,
+      1,
+      this.configService.get('ACCESS_TOKEN_BLACKLIST_TTL'),
+    );
+
+    //Removing refresh token out of cookie and removing it from the whitelist
+    res.clearCookie('refreshToken');
+    this.cacheManager.del(refreshToken);
+
+    return res;
   }
 }

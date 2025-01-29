@@ -69,7 +69,10 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtGuard)
   //Fix typing later, sum is wrong with AuthenticatedRequest when using req.headers
-  logout(@Request() req: ExpressRequest, @Response() res: ExpressResponse) {
+  async logout(
+    @Request() req: ExpressRequest,
+    @Response() res: ExpressResponse,
+  ) {
     const accessToken = req.headers.authorization.split(' ')[1];
     const refreshToken = req.cookies.refreshToken;
     const user = req.user;
@@ -79,7 +82,7 @@ export class AuthController {
     console.log(accessToken, refreshToken);
 
     //Assigning response with cookie cleared to res (see method)
-    res = this.authService.logout(accessToken, refreshToken, user, res);
+    res = await this.authService.logout(accessToken, refreshToken, user, res);
 
     //Finishing the req-res cycle with the cookie-free response
     res.sendStatus(200);

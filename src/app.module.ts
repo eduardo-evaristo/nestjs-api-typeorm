@@ -7,13 +7,14 @@ import { QuestionsModule } from './questions/questions.module';
 import { AuthModule } from './auth/auth.module';
 import dbConfig from './config/db.config';
 import { CacheModule } from '@nestjs/cache-manager';
+import redisConfig from './config/redis.config';
 
 @Module({
   imports: [
     //Loading the .env variables
-    ConfigModule.forRoot({ load: [dbConfig], isGlobal: true }),
+    ConfigModule.forRoot({ load: [dbConfig, redisConfig], isGlobal: true }),
     TypeOrmModule.forRootAsync(dbConfig.asProvider()),
-    CacheModule.register({ isGlobal: true }),
+    CacheModule.registerAsync({ isGlobal: true, useFactory: redisConfig }),
     UsersModule,
     ChatsModule,
     QuestionsModule,

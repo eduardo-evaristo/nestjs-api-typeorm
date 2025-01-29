@@ -100,6 +100,7 @@ export class AuthService {
       user.id,
       this.configService.get('REFRESH_TOKEN_WHITELIST_TTL'),
     );
+    console.log(this.configService.get('REFRESH_TOKEN_WHITELIST_TTL'));
 
     return { accessToken, refreshToken };
   }
@@ -108,14 +109,14 @@ export class AuthService {
     return { acessToken: await this.jwtService.signAsync(payloadFromRefresh) };
   }
 
-  logout(
+  async logout(
     accessToken: string,
     refreshToken: string,
     user,
     res: Response,
-  ): Response {
+  ): Promise<Response> {
     //Blacklisting last used access token (inserting into cache for 1h)
-    this.cacheManager.set(
+    await this.cacheManager.set(
       accessToken,
       1,
       this.configService.get('ACCESS_TOKEN_BLACKLIST_TTL'),
@@ -123,7 +124,7 @@ export class AuthService {
 
     //Removing refresh token out of cookie and removing it from the whitelist
     res.clearCookie('refreshToken');
-    this.cacheManager.del(refreshToken);
+    await this.cacheManager.del(refreshToken);
 
     return res;
   }
